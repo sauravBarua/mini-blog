@@ -3,3 +3,4 @@ allowBuilds:
   workerd: true
   prisma: true
   '@prisma/engines': true
+  '@scarf/scarf': true

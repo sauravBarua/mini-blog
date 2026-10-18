@@ -1,12 +1,15 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import { env } from './config/env.js';
+import { openApiDocument } from './docs/openapi.js';
 import { prisma } from './lib/prisma.js';
 import { httpLogger } from './middleware/http-logger.js';
 import { notFoundHandler } from './middleware/not-found.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { authRouter } from './modules/auth/auth.routes.js';
-import { postsRouter } from './modules/posts/posts.routes.js';
 import { commentsRouter } from './modules/comments/comments.routes.js';
+import { postsRouter } from './modules/posts/posts.routes.js';
 
 export const app = express();
 
@@ -34,6 +37,13 @@ app.get('/health/db', async (_req, res) => {
 app.use('/auth', authRouter);
 app.use('/posts', postsRouter);
 app.use(commentsRouter);
+
+if (env.NODE_ENV !== 'production') {
+  app.get('/docs.json', (_req, res) => {
+    res.status(200).json(openApiDocument);
+  });
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+}
 
 app.use(notFoundHandler);
 app.use(errorHandler);
