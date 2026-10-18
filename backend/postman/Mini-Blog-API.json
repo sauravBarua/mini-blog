@@ -3,7 +3,11 @@
     "name": "Mini Blog API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [{ "key": "baseUrl", "value": "http://localhost:3000" }],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "password", "value": "Password123!" },
+    { "key": "email", "value": "" }
+  ],
   "item": [
     {
       "name": "Phase 1 - Health",
@@ -70,6 +74,206 @@
               "pm.test('400', () => pm.response.to.have.status(400));",
               "pm.test('INVALID_JSON code', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_JSON'));"
             ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Register (201)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"name\": \"Test User\",\n  \"password\": \"{{password}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/register"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.collectionVariables.set('email', 'user_' + Date.now() + '@example.com');"]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "pm.test('returns the user without passwordHash', () => {",
+              "  const user = pm.response.json().user;",
+              "  pm.expect(user.email).to.eql(pm.collectionVariables.get('email'));",
+              "  pm.expect(user).to.not.have.property('passwordHash');",
+              "});",
+              "pm.test('sets an httpOnly cookie', () => pm.expect(pm.response.headers.get('Set-Cookie')).to.include('HttpOnly'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Register duplicate email (409)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"name\": \"Test User\",\n  \"password\": \"{{password}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/register"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+              "pm.test('EMAIL_TAKEN code', () => pm.expect(pm.response.json().error.code).to.eql('EMAIL_TAKEN'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Register invalid body (400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"not-an-email\",\n  \"name\": \"\",\n  \"password\": \"short\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/register"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+              "pm.test('VALIDATION_ERROR with field details', () => {",
+              "  const error = pm.response.json().error;",
+              "  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
+              "  pm.expect(error.details.length).to.be.at.least(3);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Me after register (200)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('returns the registered user', () => pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('email')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Logout (204)",
+      "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Me after logout (401)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+              "pm.test('UNAUTHENTICATED code', () => pm.expect(pm.response.json().error.code).to.eql('UNAUTHENTICATED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Login wrong password (401)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"WrongPassword1!\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+              "pm.test('INVALID_CREDENTIALS code', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_CREDENTIALS'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Login (200)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('returns the user', () => pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('email')));",
+              "pm.test('sets an httpOnly cookie', () => pm.expect(pm.response.headers.get('Set-Cookie')).to.include('HttpOnly'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 - Me after login (200)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
           }
         }
       ]

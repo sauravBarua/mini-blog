@@ -1,13 +1,16 @@
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import { prisma } from './lib/prisma.js';
 import { httpLogger } from './middleware/http-logger.js';
 import { notFoundHandler } from './middleware/not-found.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { authRouter } from './modules/auth/auth.routes.js';
 
 export const app = express();
 
 app.use(httpLogger);
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/health', (_req, res) => {
   res.status(200).json({
@@ -25,6 +28,8 @@ app.get('/health/db', async (_req, res) => {
     res.status(503).json({ status: 'error', database: 'down' });
   }
 });
+
+app.use('/auth', authRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
