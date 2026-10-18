@@ -19,6 +19,24 @@ export const authenticate: RequestHandler = async (req, res, next) => {
   }
 };
 
+// For public routes whose result depends on who is asking (e.g. a draft's author).
+export const optionalAuthenticate: RequestHandler = async (req, res, next) => {
+  const token: unknown = req.cookies?.[AUTH_COOKIE];
+
+  if (typeof token === 'string') {
+    try {
+      res.locals.userId = await verifyToken(token);
+    } catch {
+      // invalid or expired token: treat the request as anonymous
+    }
+  }
+  next();
+};
+
 export function getAuthUserId(res: Response): string {
   return res.locals.userId as string;
+}
+
+export function getOptionalAuthUserId(res: Response): string | undefined {
+  return res.locals.userId as string | undefined;
 }

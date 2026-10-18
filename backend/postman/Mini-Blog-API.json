@@ -1,92 +1,33 @@
 {
   "info": {
-    "name": "Mini Blog API",
+    "name": "Mini Blog API - Phase 5",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": ["pm.request.headers.upsert({ key: 'Content-Type', value: 'application/json' });"]
+      }
+    }
+  ],
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3000" },
     { "key": "password", "value": "Password123!" },
-    { "key": "email", "value": "" }
+    { "key": "emailA", "value": "" },
+    { "key": "emailB", "value": "" },
+    { "key": "postId", "value": "" },
+    { "key": "commentId", "value": "" }
   ],
   "item": [
     {
-      "name": "Phase 1 - Health",
-      "request": { "method": "GET", "url": "{{baseUrl}}/health" },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "pm.test('status is ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Phase 2 - Health DB",
-      "request": { "method": "GET", "url": "{{baseUrl}}/health/db" },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "pm.test('database is up', () => pm.expect(pm.response.json().database).to.eql('up'));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Phase 3 - Unknown route (404)",
-      "request": { "method": "GET", "url": "{{baseUrl}}/nope" },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('404', () => pm.response.to.have.status(404));",
-              "pm.test('NOT_FOUND code', () => pm.expect(pm.response.json().error.code).to.eql('NOT_FOUND'));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Phase 3 - Malformed JSON (400)",
+      "name": "01 Register user A (201)",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{ \"title\": " },
-        "url": "{{baseUrl}}/anything"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('400', () => pm.response.to.have.status(400));",
-              "pm.test('INVALID_JSON code', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_JSON'));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Phase 4 - Register (201)",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"{{email}}\",\n  \"name\": \"Test User\",\n  \"password\": \"{{password}}\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "raw": "{\"email\":\"{{emailA}}\",\"name\":\"Author A\",\"password\":\"{{password}}\"}"
         },
         "url": "{{baseUrl}}/auth/register"
       },
@@ -95,35 +36,269 @@
           "listen": "prerequest",
           "script": {
             "type": "text/javascript",
-            "exec": ["pm.collectionVariables.set('email', 'user_' + Date.now() + '@example.com');"]
+            "exec": [
+              "const id = Date.now();",
+              "pm.collectionVariables.set('emailA', 'a_' + id + '@example.com');",
+              "pm.collectionVariables.set('emailB', 'b_' + id + '@example.com');"
+            ]
           }
         },
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
+            "exec": ["pm.test('201', () => pm.response.to.have.status(201));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Create draft post (201)",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"My first post\",\"content\":\"Hello from Postman\",\"published\":false}"
+        },
+        "url": "{{baseUrl}}/posts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
             "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "pm.test('returns the user without passwordHash', () => {",
-              "  const user = pm.response.json().user;",
-              "  pm.expect(user.email).to.eql(pm.collectionVariables.get('email'));",
-              "  pm.expect(user).to.not.have.property('passwordHash');",
-              "});",
-              "pm.test('sets an httpOnly cookie', () => pm.expect(pm.response.headers.get('Set-Cookie')).to.include('HttpOnly'));"
+              "pm.test('201', () => pm.response.to.have.status(201));",
+              "const post = pm.response.json().post;",
+              "pm.test('draft by Author A', () => { pm.expect(post.published).to.eql(false); pm.expect(post.author.name).to.eql('Author A'); });",
+              "pm.collectionVariables.set('postId', post.id);"
             ]
           }
         }
       ]
     },
     {
-      "name": "Phase 4 - Register duplicate email (409)",
+      "name": "03 Create post invalid (400)",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"title\":\"\",\"content\":\"\"}" },
+        "url": "{{baseUrl}}/posts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));",
+              "pm.test('VALIDATION_ERROR', () => pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 My posts include the draft, without content (200)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/posts/mine" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('contains the draft', () => pm.expect(body.data.some((p) => p.id === pm.collectionVariables.get('postId'))).to.eql(true));",
+              "pm.test('no content in list', () => pm.expect(body.data[0]).to.not.have.property('content'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Public list hides the draft (200)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/posts?limit=50" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('draft not listed', () => pm.expect(pm.response.json().data.some((p) => p.id === pm.collectionVariables.get('postId'))).to.eql(false));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Owner reads own draft (200)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/posts/{{postId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('has content', () => pm.expect(pm.response.json().post.content).to.eql('Hello from Postman'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Publish the post (200)",
+      "request": {
+        "method": "PATCH",
+        "body": { "mode": "raw", "raw": "{\"published\":true}" },
+        "url": "{{baseUrl}}/posts/{{postId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('published', () => pm.expect(pm.response.json().post.published).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Update title only keeps published (200)",
+      "request": {
+        "method": "PATCH",
+        "body": { "mode": "raw", "raw": "{\"title\":\"Updated title\"}" },
+        "url": "{{baseUrl}}/posts/{{postId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const post = pm.response.json().post;",
+              "pm.test('title changed, still published', () => { pm.expect(post.title).to.eql('Updated title'); pm.expect(post.published).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Update with empty body (400)",
+      "request": {
+        "method": "PATCH",
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": "{{baseUrl}}/posts/{{postId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('400', () => pm.response.to.have.status(400));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Public list shows the post, with meta (200)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/posts?limit=50" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('post listed', () => pm.expect(body.data.some((p) => p.id === pm.collectionVariables.get('postId'))).to.eql(true));",
+              "pm.test('meta', () => { pm.expect(body.meta.limit).to.eql(50); pm.expect(body.meta.page).to.eql(1); pm.expect(body.meta.total).to.be.a('number'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Invalid pagination (400)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/posts?limit=0" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('400', () => pm.response.to.have.status(400));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Add comment (201)",
+      "request": {
+        "method": "POST",
+        "body": { "mode": "raw", "raw": "{\"content\":\"Nice post!\"}" },
+        "url": "{{baseUrl}}/posts/{{postId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201', () => pm.response.to.have.status(201));",
+              "const comment = pm.response.json().comment;",
+              "pm.test('by Author A', () => pm.expect(comment.author.name).to.eql('Author A'));",
+              "pm.collectionVariables.set('commentId', comment.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Add empty comment (400)",
+      "request": {
+        "method": "POST",
+        "body": { "mode": "raw", "raw": "{\"content\":\"\"}" },
+        "url": "{{baseUrl}}/posts/{{postId}}/comments"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('400', () => pm.response.to.have.status(400));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 List comments (200)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/posts/{{postId}}/comments" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('one comment', () => { pm.expect(body.data.length).to.eql(1); pm.expect(body.meta.total).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Register user B (201)",
+      "request": {
+        "method": "POST",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"{{email}}\",\n  \"name\": \"Test User\",\n  \"password\": \"{{password}}\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "raw": "{\"email\":\"{{emailB}}\",\"name\":\"Reader B\",\"password\":\"{{password}}\"}"
         },
         "url": "{{baseUrl}}/auth/register"
       },
@@ -132,25 +307,17 @@
           "listen": "test",
           "script": {
             "type": "text/javascript",
-            "exec": [
-              "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
-              "pm.test('EMAIL_TAKEN code', () => pm.expect(pm.response.json().error.code).to.eql('EMAIL_TAKEN'));"
-            ]
+            "exec": ["pm.test('201', () => pm.response.to.have.status(201));"]
           }
         }
       ]
     },
     {
-      "name": "Phase 4 - Register invalid body (400)",
+      "name": "16 B edits A's post (403)",
       "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"not-an-email\",\n  \"name\": \"\",\n  \"password\": \"short\"\n}",
-          "options": { "raw": { "language": "json" } }
-        },
-        "url": "{{baseUrl}}/auth/register"
+        "method": "PATCH",
+        "body": { "mode": "raw", "raw": "{\"title\":\"Hacked\"}" },
+        "url": "{{baseUrl}}/posts/{{postId}}"
       },
       "event": [
         {
@@ -158,73 +325,120 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
-              "pm.test('VALIDATION_ERROR with field details', () => {",
-              "  const error = pm.response.json().error;",
-              "  pm.expect(error.code).to.eql('VALIDATION_ERROR');",
-              "  pm.expect(error.details.length).to.be.at.least(3);",
-              "});"
+              "pm.test('403', () => pm.response.to.have.status(403));",
+              "pm.test('FORBIDDEN', () => pm.expect(pm.response.json().error.code).to.eql('FORBIDDEN'));"
             ]
           }
         }
       ]
     },
     {
-      "name": "Phase 4 - Me after register (200)",
-      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
+      "name": "17 B deletes A's post (403)",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/posts/{{postId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('403', () => pm.response.to.have.status(403));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 B deletes A's comment (403)",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/comments/{{commentId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('403', () => pm.response.to.have.status(403));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 Login as A (200)",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{emailA}}\",\"password\":\"{{password}}\"}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('200', () => pm.response.to.have.status(200));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 A deletes own comment (204)",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/comments/{{commentId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('204', () => pm.response.to.have.status(204));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 A deletes own post (204)",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/posts/{{postId}}" },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('204', () => pm.response.to.have.status(204));"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 Deleted post is gone (404)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/posts/{{postId}}" },
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "pm.test('returns the registered user', () => pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('email')));"
+              "pm.test('404', () => pm.response.to.have.status(404));",
+              "pm.test('POST_NOT_FOUND', () => pm.expect(pm.response.json().error.code).to.eql('POST_NOT_FOUND'));"
             ]
           }
         }
       ]
     },
     {
-      "name": "Phase 4 - Logout (204)",
+      "name": "23 Logout (204)",
       "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" },
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
-            "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"]
+            "exec": ["pm.test('204', () => pm.response.to.have.status(204));"]
           }
         }
       ]
     },
     {
-      "name": "Phase 4 - Me after logout (401)",
-      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
-              "pm.test('UNAUTHENTICATED code', () => pm.expect(pm.response.json().error.code).to.eql('UNAUTHENTICATED'));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Phase 4 - Login wrong password (401)",
+      "name": "24 Create post while logged out (401)",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"WrongPassword1!\"\n}",
-          "options": { "raw": { "language": "json" } }
-        },
-        "url": "{{baseUrl}}/auth/login"
+        "body": { "mode": "raw", "raw": "{\"title\":\"Nope\",\"content\":\"Nope\"}" },
+        "url": "{{baseUrl}}/posts"
       },
       "event": [
         {
@@ -232,48 +446,9 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
-              "pm.test('INVALID_CREDENTIALS code', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_CREDENTIALS'));"
+              "pm.test('401', () => pm.response.to.have.status(401));",
+              "pm.test('UNAUTHENTICATED', () => pm.expect(pm.response.json().error.code).to.eql('UNAUTHENTICATED'));"
             ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Phase 4 - Login (200)",
-      "request": {
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
-          "options": { "raw": { "language": "json" } }
-        },
-        "url": "{{baseUrl}}/auth/login"
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "pm.test('returns the user', () => pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('email')));",
-              "pm.test('sets an httpOnly cookie', () => pm.expect(pm.response.headers.get('Set-Cookie')).to.include('HttpOnly'));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Phase 4 - Me after login (200)",
-      "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
           }
         }
       ]

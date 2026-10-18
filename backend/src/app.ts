@@ -5,6 +5,8 @@ import { httpLogger } from './middleware/http-logger.js';
 import { notFoundHandler } from './middleware/not-found.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { postsRouter } from './modules/posts/posts.routes.js';
+import { commentsRouter } from './modules/comments/comments.routes.js';
 
 export const app = express();
 
@@ -30,6 +32,8 @@ app.get('/health/db', async (_req, res) => {
 });
 
 app.use('/auth', authRouter);
+app.use('/posts', postsRouter);
+app.use(commentsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

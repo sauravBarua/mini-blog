@@ -50,6 +50,7 @@ export const AnyNull = runtime.AnyNull;
 export const ModelName = {
   User: 'User',
   Post: 'Post',
+  Comment: 'Comment',
 } as const;
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName];
@@ -90,6 +91,17 @@ export const PostScalarFieldEnum = {
 } as const;
 
 export type PostScalarFieldEnum = (typeof PostScalarFieldEnum)[keyof typeof PostScalarFieldEnum];
+
+export const CommentScalarFieldEnum = {
+  id: 'id',
+  content: 'content',
+  postId: 'postId',
+  authorId: 'authorId',
+  createdAt: 'createdAt',
+} as const;
+
+export type CommentScalarFieldEnum =
+  (typeof CommentScalarFieldEnum)[keyof typeof CommentScalarFieldEnum];
 
 export const SortOrder = {
   asc: 'asc',
