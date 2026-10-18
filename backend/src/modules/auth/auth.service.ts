@@ -1,9 +1,11 @@
 import bcrypt from 'bcryptjs';
+import { env } from '../../config/env.js';
 import { AppError } from '../../errors/app-error.js';
 import { prisma } from '../../lib/prisma.js';
 import type { LoginInput, RegisterInput } from './auth.schemas.js';
 
-const BCRYPT_ROUNDS = 12;
+// A low cost factor in tests only, to keep the suite fast.
+const BCRYPT_ROUNDS = env.NODE_ENV === 'test' ? 4 : 12;
 
 // Compared against when the email is unknown, so login takes the same time either way.
 const dummyHash = await bcrypt.hash('not-a-real-password', BCRYPT_ROUNDS);
