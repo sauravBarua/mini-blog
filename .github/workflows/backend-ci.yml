@@ -1,0 +1,89 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      # prisma.config.ts requires this variable, even for `prisma generate`.
+      DATABASE_URL: postgresql://blog:blog@localhost:5432/blog_test
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: blog
+          POSTGRES_PASSWORD: blog
+          POSTGRES_DB: blog_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U blog -d blog_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # pnpm 10 or older: pnpm/action-setup@v6. pnpm 11 or newer: pnpm/setup@v1.
+      # The version comes from "packageManager" in the root package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Smoke test the production build
+        env:
+          NODE_ENV: production
+          PORT: '3000'
+          JWT_SECRET: ci-smoke-secret-ci-smoke-secret-123456
+        run: |
+          node dist/server.js &
+          SERVER_PID=$!
+          curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 http://localhost:3000/health
+          echo
+          curl --fail --silent --show-error http://localhost:3000/health/db
+          echo
+          kill $SERVER_PID
