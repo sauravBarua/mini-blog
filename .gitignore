@@ -1,7 +1,10 @@
 node_modules
 dist
 coverage
+tests
+src/generated
 .env
 .env.*
-!.env.example
-.DS_Store
+*.log
+Dockerfile
+.dockerignore

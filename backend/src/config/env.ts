@@ -8,6 +8,8 @@ const envSchema = z.object({
   DATABASE_URL: z.url(),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN_DAYS: z.coerce.number().int().positive().default(7),
+  // Defaults to true in production. Set to "false" only to test the production build over plain HTTP.
+  COOKIE_SECURE: z.enum(['true', 'false']).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -17,4 +19,9 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+export const env = {
+  ...parsed.data,
+  COOKIE_SECURE: parsed.data.COOKIE_SECURE
+    ? parsed.data.COOKIE_SECURE === 'true'
+    : parsed.data.NODE_ENV === 'production',
+};

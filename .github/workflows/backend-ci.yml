@@ -87,3 +87,11 @@ jobs:
           curl --fail --silent --show-error http://localhost:3000/health/db
           echo
           kill $SERVER_PID
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the production image
+        run: docker build --target runtime ./backend

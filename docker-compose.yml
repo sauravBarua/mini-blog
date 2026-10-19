@@ -17,5 +17,40 @@ services:
       timeout: 3s
       retries: 10
 
+  # The services below only start with: docker compose --profile app up -d --build
+  migrate:
+    profiles: [app]
+    build:
+      context: ./backend
+      target: build
+    command: pnpm exec prisma migrate deploy
+    environment:
+      DATABASE_URL: postgresql://blog:blog@db:5432/blog
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    profiles: [app]
+    build:
+      context: ./backend
+      target: runtime
+    container_name: mini-blog-backend
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://blog:blog@db:5432/blog
+      JWT_SECRET: ${JWT_SECRET:-}
+      # Local testing only: lets the production build set cookies over plain http://localhost.
+      COOKIE_SECURE: 'false'
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:

@@ -5,7 +5,7 @@ export const AUTH_COOKIE = 'token';
 
 const baseOptions = {
   httpOnly: true,
-  secure: env.NODE_ENV === 'production',
+  secure: env.COOKIE_SECURE,
   sameSite: 'lax',
   path: '/',
 } as const;
