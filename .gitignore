@@ -6,5 +6,3 @@ src/generated
 .env
 .env.*
 *.log
-Dockerfile
-.dockerignore
