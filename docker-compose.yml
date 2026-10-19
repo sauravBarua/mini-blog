@@ -52,5 +52,20 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  frontend:
+    profiles: [app]
+    build:
+      context: ./frontend
+      target: runtime
+      args:
+        API_URL: http://backend:3000
+    container_name: mini-blog-frontend
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   pgdata:
