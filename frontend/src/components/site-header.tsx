@@ -16,11 +16,11 @@ export function SiteHeader() {
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-6">
+      <div className="mx-auto flex min-h-16 max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-3">
         <Link href="/" className="text-lg font-semibold tracking-tight">
           Mini Blog
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex flex-wrap items-center gap-4 text-sm">
           {status === 'loading' && (
             <span
               aria-hidden
@@ -39,6 +39,12 @@ export function SiteHeader() {
           )}
           {status === 'authenticated' && (
             <>
+              <Link href="/my-posts" className="hover:underline">
+                My posts
+              </Link>
+              <Link href="/posts/new" className={primaryButton}>
+                New post
+              </Link>
               <span className="font-medium">{user.name}</span>
               <button type="button" onClick={handleLogout} className="hover:underline">
                 Log out

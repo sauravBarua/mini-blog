@@ -1,15 +1,10 @@
-import { BackendStatus } from '@/components/backend-status';
+import { PostList } from '@/components/post-list';
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-2xl flex-col justify-center gap-8 px-6 py-16">
-      <header className="space-y-2">
-        <h1 className="text-4xl font-semibold tracking-tight">Mini Blog</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Next.js frontend talking to the Express API through a same-origin proxy.
-        </p>
-      </header>
-      <BackendStatus />
+    <main className="mx-auto w-full max-w-3xl px-6 py-12">
+      <h1 className="text-3xl font-semibold tracking-tight">Latest posts</h1>
+      <PostList scope="public" />
     </main>
   );
 }
